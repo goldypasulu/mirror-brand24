@@ -121,7 +121,7 @@ export const lodifyApi = {
     // Browser was sending undefined, causing backend to fail reading Excel file
     const { data, error } = await useLodify(url, {
       headers: {
-        'Cookie': credentials.cookies,        // Required: Brand24 session cookies
+        'x-proxy-cookie': credentials.cookies, // 🛠️ Tunnel: Proxy renames to 'Cookie'
         'token': credentials.token,           // Required: Lodify token
         'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
         'tknb24': credentials.token,           // Required: Same as token
@@ -147,7 +147,7 @@ export const lodifyApi = {
     // Send all required headers exactly as shown in Postman
     const { data, error } = await useLodify(url, {
       headers: {
-        'Cookie': credentials.cookies,        // Required: Brand24 session cookies
+        'x-proxy-cookie': credentials.cookies, // 🛠️ Tunnel: Proxy renames to 'Cookie'
         'token': credentials.token,           // Required: Lodify token
         'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
         'tknb24': credentials.token,          // Required: Same as token
@@ -215,7 +215,7 @@ export const lodifyApi = {
     // Browser was sending undefined, causing backend to fail reading Excel file
     const { data, error } = await useLodify(url, {
       headers: {
-        'Cookie': credentials.cookies,        // Required: Brand24 session cookies
+        'x-proxy-cookie': credentials.cookies, // 🛠️ Tunnel: Proxy renames to 'Cookie'
         'token': credentials.token,           // Required: Lodify token
         'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
         'tknb24': credentials.token,           // Required: Same as token

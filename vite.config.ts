@@ -20,6 +20,31 @@ export default defineConfig({
         target: 'https://api.lodify.lodemo.id',
         changeOrigin: true,
         secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            // 🛠️ COOKIE TUNNELING FIX
+            // Browser automerges cookies, causing session conflicts on backend.
+            // We send 'x-proxy-cookie' from frontend, and proxy moves it to 'Cookie'.
+            
+            const tunneledCookie = proxyReq.getHeader('x-proxy-cookie')
+            if (tunneledCookie) {
+              // 1. Set the Clean Cookie intended by our logic
+              proxyReq.setHeader('Cookie', tunneledCookie)
+              // 2. Remove the custom header
+              proxyReq.removeHeader('x-proxy-cookie')
+              console.log('🍪 Tunneling Cookie SUCCESS')
+            } else {
+               // If no tunnel, remove browser cookies to prevent contamination
+               proxyReq.removeHeader('Cookie')
+            }
+
+            // 3. Strip browser tracking headers
+            proxyReq.removeHeader('Origin')
+            proxyReq.removeHeader('Referer')
+            
+            console.log('🚀 Proxy -> Backend:', req.method, req.url)
+          })
+        },
       },
     },
   },
