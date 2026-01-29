@@ -25,9 +25,11 @@ const groupedData = computed(() => {
     // Extract YYYY-MM-DD from timestamp (2026-01-19 12:03 PM) or ISO string
     // Assuming timestamp format is consistent. If it's string, we try to parse it.
     let dateKey = ''
-    try {
-      dateKey = new Date(m.timestamp).toISOString().split('T')[0]
-    } catch (e) {
+    // Use substring to get YYYY-MM-DD directly from the timestamp string
+    // The store formats timestamp as "YYYY-MM-DDTHH:mm:ss", so first 10 chars are the date.
+    if (m.timestamp && m.timestamp.length >= 10) {
+      dateKey = m.timestamp.substring(0, 10)
+    } else {
       return // Skip invalid
     }
 
@@ -145,6 +147,7 @@ const chartOptions = computed(() => {
       },
       yaxis: [
         {
+          min: 0, // Always start at zero for accurate visualization
           title: {
             text: 'Mentions',
             style: {
@@ -158,6 +161,7 @@ const chartOptions = computed(() => {
           },
         },
         {
+          min: 0, // Always start at zero for accurate visualization
           opposite: true,
           title: {
             text: 'Reach',
@@ -218,6 +222,7 @@ const chartOptions = computed(() => {
       },
     },
     yaxis: {
+      min: 0, // Always start at zero for accurate visualization
       title: {
         text: 'Count',
         style: {

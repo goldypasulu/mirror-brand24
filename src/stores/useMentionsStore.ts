@@ -37,7 +37,19 @@ export const useMentionsStore = defineStore('mentions', {
   getters: {
     filteredMentions: (state) => {
       return state.mentions.filter(mention => {
-        // Date filter is handled by API fetch, but we might want to double check or handle other filters here
+        // Date Filter (Client-side implementation until Backend API supports it)
+        if (state.filters.dateFrom && state.filters.dateTo) {
+          const mentionDate = new Date(mention.timestamp)
+          const fromDate = new Date(state.filters.dateFrom)
+          const toDate = new Date(state.filters.dateTo)
+          
+          // Set to end of day for comparison
+          toDate.setHours(23, 59, 59, 999)
+          
+          if (mentionDate < fromDate || mentionDate > toDate) {
+            return false
+          }
+        }
         
         // Sentiment Filter
         if (state.filters.sentiments.length > 0 && !state.filters.sentiments.includes(mention.sentiment)) {
@@ -264,6 +276,42 @@ export const useMentionsStore = defineStore('mentions', {
         throw err
       } finally {
         this.loading = false
+      }
+    },
+
+    // Manual Sync: Step 1 - Trigger scraping (Brand24 → Google Sheets)
+    async triggerScraping(dateFrom: string, dateTo: string) {
+      try {
+        const result = await lodifyApi.fetchMentions(dateFrom, dateTo)
+        console.log('Scraping triggered:', result)
+        return result
+      } catch (err: any) {
+        console.error('Scraping failed:', err)
+        throw new Error(`Scraping failed: ${err.message || 'Unknown error'}`)
+      }
+    },
+
+    // Manual Sync: Step 2 - Truncate (Clear old data from Google Sheets)
+    async truncateData() {
+      try {
+        const result = await lodifyApi.truncate()
+        console.log('Data truncated:', result)
+        return result
+      } catch (err: any) {
+        console.error('Truncate failed:', err)
+        throw new Error(`Truncate failed: ${err.message || 'Unknown error'}`)
+      }
+    },
+
+    // Manual Sync: Step 3 - Sync data (Google Sheets → Database)
+    async syncDataToDatabase(dateFrom: string, dateTo: string) {
+      try {
+        const result = await lodifyApi.syncData(dateFrom, dateTo)
+        console.log('Data synced to database:', result)
+        return result
+      } catch (err: any) {
+        console.error('Database sync failed:', err)
+        throw new Error(`Database sync failed: ${err.message || 'Unknown error'}`)
       }
     },
 

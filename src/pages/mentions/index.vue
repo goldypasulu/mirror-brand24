@@ -3,6 +3,7 @@ import { useMentionsStore } from '@/stores/useMentionsStore';
 import MentionsChart from '@/views/mentions/MentionsChart.vue';
 import MentionsFilters from '@/views/mentions/MentionsFilters.vue';
 import MentionsList from '@/views/mentions/MentionsList.vue';
+import MentionsSyncPanel from '@/views/mentions/MentionsSyncPanel.vue';
 
 const store = useMentionsStore();
 
@@ -22,6 +23,7 @@ store.setMockMode(false);
 
       <!-- Right Sidebar Filters (Right 4 cols) -->
       <VCol cols="12" lg="4">
+        <MentionsSyncPanel />
         <MentionsFilters />
       </VCol>
     </VRow>

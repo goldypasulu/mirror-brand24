@@ -43,16 +43,51 @@ export interface LodifyMention {
   [key: string]: any
 }
 
-// Token storage (in-memory)
+// Token storage with localStorage persistence
+const TOKEN_STORAGE_KEY = 'lodify_token_data'
 let _tokenData: LodifyToken | null = null
+
+// Helper: Load token from localStorage
+function loadTokenFromStorage(): LodifyToken | null {
+  try {
+    const stored = localStorage.getItem(TOKEN_STORAGE_KEY)
+    if (stored) {
+      return JSON.parse(stored) as LodifyToken
+    }
+  } catch (e) {
+    console.error('Failed to load token from localStorage:', e)
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+  }
+  return null
+}
+
+// Helper: Save token to localStorage
+function saveTokenToStorage(token: LodifyToken): void {
+  try {
+    localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token))
+  } catch (e) {
+    console.error('Failed to save token to localStorage:', e)
+  }
+}
 
 export const lodifyApi = {
   // Authentication
   async getToken(): Promise<LodifyToken> {
+    // 1. Check in-memory cache first (fastest)
     if (_tokenData) return _tokenData
     
-    // The endpoint is POST /scrap/gettoken based on 405 response
-    const { data, error } = await useLodify('/scrap/gettoken').post().json()
+    // 2. Check localStorage (survives page refresh)
+    const storedToken = loadTokenFromStorage()
+    if (storedToken) {
+      _tokenData = storedToken
+      return _tokenData
+    }
+    
+    // 3. Fetch new token from API
+    const { data, error } = await useLodify('/scrap/gettoken').post({
+      username: 'julian@lodagency.co.id',
+      password: '@Lod@2025v2'
+    }).json()
     
     if (error.value) {
       console.error('Failed to get Lodify token:', error.value)
@@ -67,15 +102,55 @@ export const lodifyApi = {
        throw new Error('Invalid token response')
     }
 
+    // 4. Save to localStorage for persistence
+    saveTokenToStorage(_tokenData)
+
     return _tokenData
   },
 
-  // Fetch Mentions
+  // Fetch Mentions (Scrape from Brand24 → Google Sheets)
   async fetchMentions(dateFrom: string, dateTo: string) {
+    // Get credentials with all required data
+    const credentials = await this.getToken()
+    
     // According to docs: POST /scrap/scrap-data?date_from=...&date_to=...
     const url = `/scrap/scrap-data?date_from=${dateFrom}&date_to=${dateTo}`
     
-    const { data, error, isFinished } = await useLodify(url).post().json()
+    // Send all required headers exactly as shown in Postman
+    const { data, error } = await useLodify(url, {
+      headers: {
+        'Cookie': credentials.cookies,        // Required: Brand24 session cookies
+        'token': credentials.token,           // Required: Lodify token
+        'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
+        'tknb24': credentials.token,           // Required: Same as token
+      }
+    }).post().json()
+
+    if (error.value) {
+      throw new Error(error.value)
+    }
+
+    return data.value
+  },
+
+  // Truncate (Clear scraped data from Google Sheets)
+  // Position: After scraping, before data insertion
+  async truncate() {
+    // Get credentials with all required data
+    const credentials = await this.getToken()
+    
+    // According to Postman: DELETE /scrap/truncate
+    const url = '/scrap/truncate'
+    
+    // Send all required headers exactly as shown in Postman
+    const { data, error } = await useLodify(url, {
+      headers: {
+        'Cookie': credentials.cookies,        // Required: Brand24 session cookies
+        'token': credentials.token,           // Required: Lodify token
+        'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
+        'tknb24': credentials.token,          // Required: Same as token
+      }
+    }).delete().json()
 
     if (error.value) {
       throw new Error(error.value)
@@ -116,10 +191,32 @@ export const lodifyApi = {
     return data.value
   },
   
-  // Sync Data (Insert)
+  // Logout: Clear token from memory and localStorage
+  logout() {
+    _tokenData = null
+    try {
+      localStorage.removeItem(TOKEN_STORAGE_KEY)
+    } catch (e) {
+      console.error('Failed to remove token from localStorage:', e)
+    }
+  },
+
+  // Sync Data (Insert from Google Sheets → Database)
   async syncData(dateFrom: string, dateTo: string) {
+    // Get credentials with all required data
+    const credentials = await this.getToken()
+    
     const url = `/scrap/insert-data?date_from=${dateFrom}&date_to=${dateTo}`
-    const { data, error } = await useLodify(url).post().json()
+    
+    // Send all required headers exactly as shown in Postman
+    const { data, error } = await useLodify(url, {
+      headers: {
+        'Cookie': credentials.cookies,        // Required: Brand24 session cookies
+        'token': credentials.token,           // Required: Lodify token
+        'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
+        'tknb24': credentials.token,           // Required: Same as token
+      }
+    }).post().json()
 
     if (error.value) {
       throw new Error(error.value)
