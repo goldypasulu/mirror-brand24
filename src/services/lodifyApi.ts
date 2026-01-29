@@ -5,10 +5,10 @@ import { createFetch } from '@vueuse/core'
  * Docs: https://api.lodify.lodemo.id/docs
  */
 
-// We use a separate instance for Lodify API to avoid mixing auth with main app
-// Base URL is empty to use relative path, which is handled by Vite proxy in dev
+// Use Vite proxy to avoid CORS issues
+// Proxy configured in vite.config.ts: /scrap/* → https://api.lodify.lodemo.id
 const useLodify = createFetch({
-  baseUrl: '', 
+  baseUrl: '',  // Empty = use relative path → Vite proxy
   fetchOptions: {
     headers: {
       Accept: 'application/json',
@@ -117,6 +117,8 @@ export const lodifyApi = {
     const url = `/scrap/scrap-data?date_from=${dateFrom}&date_to=${dateTo}`
     
     // Send all required headers exactly as shown in Postman
+    // IMPORTANT: Send empty object {} as body to match Node.js behavior
+    // Browser was sending undefined, causing backend to fail reading Excel file
     const { data, error } = await useLodify(url, {
       headers: {
         'Cookie': credentials.cookies,        // Required: Brand24 session cookies
@@ -124,7 +126,7 @@ export const lodifyApi = {
         'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
         'tknb24': credentials.token,           // Required: Same as token
       }
-    }).post().json()
+    }).post({}).json()
 
     if (error.value) {
       throw new Error(error.value)
@@ -209,6 +211,8 @@ export const lodifyApi = {
     const url = `/scrap/insert-data?date_from=${dateFrom}&date_to=${dateTo}`
     
     // Send all required headers exactly as shown in Postman
+    // IMPORTANT: Send empty object {} as body to match Node.js behavior
+    // Browser was sending undefined, causing backend to fail reading Excel file
     const { data, error } = await useLodify(url, {
       headers: {
         'Cookie': credentials.cookies,        // Required: Brand24 session cookies
@@ -216,7 +220,7 @@ export const lodifyApi = {
         'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
         'tknb24': credentials.token,           // Required: Same as token
       }
-    }).post().json()
+    }).post({}).json()
 
     if (error.value) {
       throw new Error(error.value)
