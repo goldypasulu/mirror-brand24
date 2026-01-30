@@ -1,0 +1,64 @@
+# 🚀 Deployment Guide: Ensuring Cloud Safety
+
+## ⚠️ Important Warning
+The fix we implemented ("Cookie Tunneling") currently lives in **Vite Proxy** ([vite.config.ts](file:///Users/goldypasulu/Documents/Development/mirror-brand24/vite.config.ts)).
+When you run `pnpm build`, Vite produces static files (HTML/JS) and **removes the proxy logic**.
+
+If you deploy these static files to a standard hosting (Vercel, Netlify, or Apache) without configuration, **the 500 Error will return** because the request rewrite logic won't be there.
+
+---
+
+## ✅ Option 1: Configure Nginx (Recommended for Production)
+
+If you are hosting on a VPS or Server using Nginx, add this configuration to your `server` block. This replicates what we did in Vite.
+
+```nginx
+location /scrap/ {
+    # 1. Point to real backend
+    proxy_pass https://api.lodify.lodemo.id/;
+    
+    # 2. Replicate Cookie Tunneling Logic
+    # If x-proxy-cookie exists, set it as the Cookie header
+    if ($http_x_proxy_cookie) {
+        set $cookie_header $http_x_proxy_cookie;
+    }
+    
+    # Apply the cookie header (clearing browser cookies)
+    proxy_set_header Cookie $cookie_header;
+    
+    # 3. Strip Tracking Headers
+    proxy_set_header Origin "";
+    proxy_set_header Referer "";
+    
+    # Standard proxy headers
+    proxy_set_header Host api.lodify.lodemo.id;
+    proxy_ssl_server_name on;
+}
+```
+
+---
+
+## 🏗️ Option 2: Backend Fix (Best Long-Term)
+
+The **most robust** solution is to ask the Backend Team to update their code so you don't need proxy tricks at all.
+
+**Request to Backend Team:**
+> "Please check the `x-proxy-cookie` header or the `token` header for authentication/session path resolution, instead of relying blindly on the standard `Cookie` header which gets contaminated by browser sessions."
+
+If they do this, you can remove the tunneling logic in frontend and just send standard requests.
+
+---
+
+## 🛡️ Is it Safe?
+
+**Yes, it is safe regarding data integrity.**
+- The data inserted is correct (9,270 records verified).
+- No data corruption occurs.
+
+**But for Deployment:**
+You simply need to ensure the **"Tunneling Logic"** exists in your production environment (using Nginx config above) until the backend is updated.
+
+### Summary
+- **Deploying to Vercel/Netlify?** You need `vercel.json` or `netlify.toml` redirects/headers (more complex).
+- **Deploying to VPS/Nginx?** Use the config above. Easy.
+- **Waiting for Backend Fix?** Best option. Keep using Dev mode for now or use Node.js script.
