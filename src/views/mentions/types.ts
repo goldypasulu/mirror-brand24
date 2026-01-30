@@ -15,6 +15,11 @@ export interface Mention {
   keywords: string[]
   sentiment: 'positive' | 'neutral' | 'negative'
   timestamp: string
+  likes: number
+  comments: number
+  shares: number
+  category: string
+  tags: string[]
 }
 
 export interface MentionFilters {

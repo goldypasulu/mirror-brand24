@@ -1,9 +1,7 @@
 <script setup lang="ts">
 import { useAiInsightsStore } from '@/stores/useAiInsightsStore'
-import AiInsightsChart from '@/views/ai-insights/AiInsightsChart.vue'
 import AiInsightsList from '@/views/ai-insights/AiInsightsList.vue'
 import AiReportsSidebar from '@/views/ai-insights/AiReportsSidebar.vue'
-import AppDateTimePicker from '@core/components/app-form-elements/AppDateTimePicker.vue'
 import { onMounted } from 'vue'
 
 const store = useAiInsightsStore()
@@ -29,31 +27,17 @@ onMounted(() => {
             Analyze your project with AI-generated insights.
         </p>
       </div>
-
-      <div style="width: 250px;">
-         <AppDateTimePicker
-            v-model="dateRange"
-            placeholder="Select Date Range"
-            :config="{ mode: 'range' }"
-            density="compact"
-          />
-      </div>
     </div>
 
     <!-- Content -->
     <VRow class="match-height">
-      <!-- Left Column: Insights List (Approx 42%) -->
-      <VCol cols="12" md="6" lg="5">
+      <!-- Main Content: Insights List -->
+      <VCol cols="12" md="9" lg="9">
         <AiInsightsList />
       </VCol>
 
-      <!-- Center Column: Charts (Approx 42%) -->
-      <VCol cols="12" md="6" lg="5">
-        <AiInsightsChart />
-      </VCol>
-
-      <!-- Right Sidebar: Reports (Approx 16%) -->
-      <VCol cols="12" md="12" lg="2">
+      <!-- Right Sidebar: Reports -->
+      <VCol cols="12" md="3" lg="3">
         <AiReportsSidebar />
       </VCol>
     </VRow>

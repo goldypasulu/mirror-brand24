@@ -1,7 +1,9 @@
 <script lang="ts" setup>
 import { useMentionsStore } from '@/stores/useMentionsStore';
+import { useRouter } from 'vue-router';
 
 const store = useMentionsStore()
+const router = useRouter()
 
 // --- State Definitions ---
 
@@ -38,12 +40,6 @@ const sentiments = ref([
 
 // Search
 const searchQuery = ref('')
-
-// AI Summary State
-const isSummarizing = ref(false)
-const aiSummaryResult = ref<string | null>(null)
-const showSummaryDialog = ref(false)
-
 
 // --- Computed ---
 
@@ -89,17 +85,10 @@ const updateDateFilter = (range: string) => {
   store.setDateFilter(formatDate(start), formatDate(end))
 }
 
-const handleAISummary = async () => {
-  isSummarizing.value = true
-  try {
-    const summary = await store.getAIInsight()
-    aiSummaryResult.value = summary
-    showSummaryDialog.value = true
-  } catch (err) {
-    console.error(err)
-  } finally {
-    isSummarizing.value = false
-  }
+const handleAISummary = () => {
+    // Redirect to AI Insights Page
+    // The store integration there will handle the fetching
+    router.push({ name: 'ai-insights' })
 }
 
 // Sync UI filters to Store
@@ -136,30 +125,7 @@ onMounted(() => {
 <template>
   <VCard>
     <VCardText>
-      <!-- Date Range -->
-      <div class="mb-6">
-        <VSelect
-          v-model="dateRange"
-          :items="dateOptions"
-          label="Date Range"
-          density="comfortable"
-          variant="outlined"
-          hide-details
-        />
-      </div>
 
-      <!-- Summarize with AI Button -->
-      <VBtn
-        block
-        color="primary"
-        variant="outlined"
-        class="mb-6 summarize-btn"
-        prepend-icon="tabler-sparkles"
-        :loading="isSummarizing"
-        @click="handleAISummary"
-      >
-        Summarize with AI
-      </VBtn>
 
       <VDivider class="mb-4" />
 
@@ -229,28 +195,6 @@ onMounted(() => {
         />
       </div>
     </VCardText>
-
-    <!-- AI Summary Dialog -->
-    <VDialog v-model="showSummaryDialog" max-width="500">
-      <VCard>
-        <VCardTitle class="d-flex align-center gap-2">
-          <VIcon icon="tabler-sparkles" color="primary" />
-          AI Summary
-        </VCardTitle>
-        <VCardText>
-          <div v-if="aiSummaryResult" class="text-body-1">
-            {{ aiSummaryResult }}
-          </div>
-          <div v-else class="text-center pa-4">
-            No summary available.
-          </div>
-        </VCardText>
-        <VCardActions>
-          <VSpacer />
-          <VBtn color="primary" @click="showSummaryDialog = false">Close</VBtn>
-        </VCardActions>
-      </VCard>
-    </VDialog>
   </VCard>
 </template>
 

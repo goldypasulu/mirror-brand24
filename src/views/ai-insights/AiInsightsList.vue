@@ -1,70 +1,139 @@
 <script setup lang="ts">
 import { useAiInsightsStore } from '@/stores/useAiInsightsStore'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
 const store = useAiInsightsStore()
-const insights = computed(() => store.insights)
-const loading = computed(() => store.loading)
 
-// Helper to format content with bold text if markdown-like syntax is used (simple implementation)
-// For now, we trust the HTML or just render plain text. 
-// If generic markdown is needed, we'd use a library. 
-// Here, we just replace **text** with <b>text</b> for simple bolding.
+// Access raw report parts directly
+const report = computed(() => store.report)
+const loading = computed(() => store.loading)
+const error = computed(() => store.error)
+
+onMounted(() => {
+    store.fetchInsights()
+})
+
 const formatContent = (text: string) => {
+  if (!text) return ''
+  // Basic bold formatting if needed, otherwise returns text
   return text.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
 }
 </script>
 
 <template>
-  <VCard title="Insights" class="h-100">
-    <VCardText v-if="loading" class="d-flex justify-center align-center" style="min-height: 200px">
-      <VProgressCircular indeterminate color="primary" />
-    </VCardText>
+  <div class="ai-insights-container h-100">
+    
+    <!-- Header -->
+    <div class="d-flex align-center justify-space-between mb-4">
+       <h1 class="text-h4 font-weight-bold">AI Insights</h1>
+       <VBtn 
+        icon="tabler-refresh" 
+        variant="text" 
+        :loading="loading" 
+        @click="store.fetchInsights()" 
+       />
+    </div>
 
-    <VCardText v-else-if="insights.length === 0" class="text-center text-disabled">
-      No insights available for this period.
-    </VCardText>
+    <!-- Loading State -->
+    <div v-if="loading" class="d-flex justify-center align-center h-50">
+        <VProgressCircular indeterminate color="primary" size="64" />
+        <span class="ms-4 text-h6 text-medium-emphasis">Analyzing data...</span>
+    </div>
 
-    <VCardText v-else class="pa-6">
-      <div v-for="(insight, index) in insights" :key="insight.id" class="mb-5 insight-item">
-        <div class="d-flex align-start">
-          <!-- Numbering: Plain Text, Theme Aware -->
-          <div class="me-3 mt-0 text-body-1 font-weight-bold opacity-100">
-             {{ index + 1 }}.
-          </div>
-          
-          <div class="flex-grow-1">
-            <!-- Title: Bold, High Emphasis -->
-            <h3 class="text-body-1 font-weight-bold mb-1 text-high-emphasis">
-              {{ insight.title }}
+    <!-- Error State -->
+    <VAlert v-else-if="error" type="error" variant="tonal" class="mb-4">
+        {{ error }}
+        <template #append>
+            <VBtn variant="text" size="small" @click="store.fetchInsights()">Retry</VBtn>
+        </template>
+    </VAlert>
+
+    <!-- Content -->
+    <div v-else class="insights-content">
+        
+        <!-- 1. Executive Summary (Headline) -->
+        <VCard v-if="report" class="mb-6 elevation-2" border>
+            <VCardText class="pa-6">
+                <div class="d-flex align-start gap-4">
+                    <VAvatar color="primary" variant="tonal" size="48" rounded>
+                        <VIcon icon="tabler-sparkles" size="28" />
+                    </VAvatar>
+                    <div>
+                        <div class="text-overline text-primary font-weight-bold mb-1">EXECUTIVE SUMMARY</div>
+                        <h2 class="text-h5 font-weight-medium" style="line-height: 1.5;">
+                            {{ report.headline }}
+                        </h2>
+                    </div>
+                </div>
+            </VCardText>
+        </VCard>
+
+        <!-- 2. Trends -->
+        <div v-if="report && report.trends" class="mb-6">
+            <h3 class="text-h6 font-weight-bold mb-3 d-flex align-center">
+                <VIcon icon="tabler-trending-up" class="me-2 text-success" />
+                Trends
             </h3>
-            
-            <!-- Content: Regular, Medium Emphasis -->
-            <p class="text-body-2 mb-1 text-medium-emphasis" v-html="formatContent(insight.content)" style="line-height: 1.6;"></p>
-            
-            <!-- Citations: Green, text-only [1] -->
-            <div class="d-flex flex-wrap gap-2 align-center mt-1">
-              <span 
-                v-for="(citation, cIndex) in insight.citations" 
-                :key="cIndex" 
-                class="text-success font-weight-bold text-caption cursor-pointer citation-link"
-              >
-                [{{ cIndex + 1 }}]
-              </span>
-            </div>
-          </div>
+            <VCard variant="outlined" class="bg-surface">
+                <VCardText>
+                    <!-- API returns <ol><li>...</li></ol> HTML string -->
+                    <div class="insight-html-content" v-html="report.trends"></div>
+                </VCardText>
+            </VCard>
         </div>
-      </div>
-    </VCardText>
-  </VCard>
+
+        <!-- 3. Key Insights -->
+        <div v-if="report && report.insights" class="mb-6">
+            <h3 class="text-h6 font-weight-bold mb-3 d-flex align-center">
+                <VIcon icon="tabler-bulb" class="me-2 text-warning" />
+                Key Insights
+            </h3>
+            <VCard variant="outlined" class="bg-surface">
+                 <VCardText>
+                     <div class="insight-html-content" v-html="report.insights"></div>
+                </VCardText>
+            </VCard>
+        </div>
+
+        <!-- 4. Recommendations -->
+        <div v-if="report && report.recommendations" class="mb-6">
+            <h3 class="text-h6 font-weight-bold mb-3 d-flex align-center">
+                <VIcon icon="tabler-check" class="me-2 text-info" />
+                Recommendations
+            </h3>
+            <VCard color="primary" variant="tonal">
+                 <VCardText>
+                     <div class="insight-html-content" v-html="report.recommendations"></div>
+                </VCardText>
+            </VCard>
+        </div>
+
+    </div>
+  </div>
 </template>
 
 <style scoped>
-.insight-item:last-child {
-  margin-bottom: 0 !important;
+.gap-3 {
+    gap: 12px;
+}
+.gap-4 {
+    gap: 16px;
 }
 
-.citation-link:hover {
-    text-decoration: underline;
+/* Style raw HTML from API */
+:deep(.insight-html-content ol) {
+    margin-left: 1.5rem;
+    margin-bottom: 0;
+}
+:deep(.insight-html-content li) {
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+}
+:deep(.insight-html-content li:last-child) {
+    margin-bottom: 0;
+}
+:deep(.insight-html-content b) {
+    font-weight: 600;
+    color: rgba(var(--v-theme-on-surface), 0.87);
 }
 </style>

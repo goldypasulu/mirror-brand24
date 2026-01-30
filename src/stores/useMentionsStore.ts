@@ -104,15 +104,21 @@ export const useMentionsStore = defineStore('mentions', {
     },
 
     async fetchMentions() {
+      // Prevent double fetching if already loading
+      if (this.loading) return
+      
       this.loading = true
       this.error = null
       
       // Mock Mode Check
       if (this.mockMode) {
-        // Simulate API delay
+        // ... (Keep existing mock logic unchanged for now, truncated for brevity in this edit if not needed, but I will preserve strict structure)
+        // ... simulating existing mock logic ...
         await new Promise(resolve => setTimeout(resolve, 800))
-        
-        const mockMentions: Mention[] = [
+         // (Using existing mock data structure from original file)
+         // For brevity, I'm assuming mock logic is strictly for demo/dev without API
+         // I will reinstate the FULL mock logic to ensure no regression.
+         const mockMentions: Mention[] = [
           {
             id: '1',
             title: 'Untung Besar Modal Kecil: 5 Trik Emas Wajib Tahu',
@@ -123,7 +129,12 @@ export const useMentionsStore = defineStore('mentions', {
             keywords: ['Telkom'],
             sentiment: 'neutral',
             timestamp: new Date().toISOString(),
-            source: { type: 'social', name: 'Facebook', avatar: '' }
+            source: { type: 'social', name: 'Facebook', avatar: '' },
+            likes: 120,
+            comments: 45,
+            shares: 12,
+            category: 'Social Media',
+            tags: ['Telkom']
           },
           {
             id: '2',
@@ -135,7 +146,12 @@ export const useMentionsStore = defineStore('mentions', {
             keywords: ['Komdigi'],
             sentiment: 'neutral',
             timestamp: new Date(Date.now() - 3600000).toISOString(),
-            source: { type: 'social', name: 'Instagram', avatar: '' }
+            source: { type: 'social', name: 'Instagram', avatar: '' },
+            likes: 850,
+            comments: 200,
+            shares: 50,
+            category: 'Social Media',
+            tags: ['Komdigi']
           },
           {
             id: '3',
@@ -147,7 +163,12 @@ export const useMentionsStore = defineStore('mentions', {
             keywords: ['Telkom', 'Komdigi'],
             sentiment: 'positive',
             timestamp: new Date(Date.now() - 7200000).toISOString(),
-            source: { type: 'social', name: 'X (Twitter)', avatar: '' }
+            source: { type: 'social', name: 'X (Twitter)', avatar: '' },
+            likes: 1542,
+            comments: 320,
+            shares: 890,
+            category: 'Social Media',
+            tags: ['Telkom', 'Komdigi']
           },
           {
             id: '4',
@@ -159,68 +180,126 @@ export const useMentionsStore = defineStore('mentions', {
             keywords: ['Telkom', 'Komdigi'],
             sentiment: 'negative',
             timestamp: new Date(Date.now() - 86400000).toISOString(),
-            source: { type: 'news', name: 'News', avatar: '' }
+            source: { type: 'news', name: 'News', avatar: '' },
+            likes: 5,
+            comments: 2,
+            shares: 0,
+            category: 'News',
+            tags: ['Telkom', 'Komdigi']
           },
         ]
-        
         this.mentions = mockMentions
         this.loading = false
         return
       }
 
       try {
-        const response = await lodifyApi.getAllMentions(1, 100) // Fetch first 100 for client-side filtering
+        // 🚀 PROGRESSIVE LOADING STRATEGY
+        // Phase 1: Quick First Paint
+        // Get Page 1 immediately to show data to user fast
+        const firstPageResponse = await lodifyApi.getAllMentions(1, 100)
         
-        let rawItems: any[] = []
+        // Handle case where API assumes empty array if no data
+        const initialItems = firstPageResponse?.items || firstPageResponse?.data || []
+        const totalItems = firstPageResponse?.total || 0
+        const totalPages = firstPageResponse?.pages || 0
+
+        // Process Phase 1 Data
+        this.mentions = this.transformMentions(initialItems)
         
-        // Handle response structure
-        if (Array.isArray(response)) {
-          rawItems = response
-        } else if (response && Array.isArray(response.items)) {
-           rawItems = response.items
-        } else {
-           console.warn('Unexpected API response format:', response)
-           rawItems = []
-           if (response && response.detail) {
-             console.error('API Error Detail:', response.detail)
-             this.error = `API Error: ${JSON.stringify(response.detail)}`
-           }
+        console.log(`Phase 1 Complete: Loaded ${this.mentions.length} of ${totalItems} items. Total Pages: ${totalPages}`)
+        
+        // If only 1 page or no data, we are done
+        if (totalPages <= 1) {
+            this.loading = false
+            return
         }
 
-        // Map API fields to Mention interface
-        this.mentions = rawItems.map((item, index) => ({
-          id: item.id ? String(item.id) : `gen-${index}`,
+        // Phase 2: Background Batch Fetching
+        // We continue loading in background, but update `loading` to false 
+        // effectively, so UI shows the first batch while we fetch the rest.
+        // Option: We could keep a separate `isBackgroundLoading` state if we want a spinner.
+        // For now, let's keep `loading = true` but maybe user sees data appearing? 
+        // Better UX: Show data immediately, show small loader for rest.
+        this.loading = false // ALLOW UI TO RENDER PAGE 1
+
+        // Calculate remaining pages
+        const remainingPages = []
+        for (let i = 2; i <= totalPages; i++) {
+            remainingPages.push(i)
+        }
+
+        // Batch processing (Chunking by 5 pages)
+        const BATCH_SIZE = 5
+        
+        for (let i = 0; i < remainingPages.length; i += BATCH_SIZE) {
+            const batch = remainingPages.slice(i, i + BATCH_SIZE)
+            
+            try {
+                // Fetch batch in parallel
+                const responses = await Promise.all(
+                    batch.map(page => lodifyApi.getAllMentions(page, 100))
+                )
+                
+                let batchItems: any[] = []
+                responses.forEach(res => {
+                    const items = res?.items || res?.data || []
+                    batchItems = [...batchItems, ...items]
+                })
+
+                // Append new items to mentions state efficiently
+                const newMentions = this.transformMentions(batchItems)
+                this.mentions = [...this.mentions, ...newMentions]
+                
+                console.log(`Batch Loaded: Pages ${batch.join(', ')} added ${newMentions.length} items. Total now: ${this.mentions.length}`)
+
+                // 🛑 YIELD TO MAIN THREAD
+                // Prevent freezing by waiting a tiny bit between batches
+                await new Promise(resolve => setTimeout(resolve, 100))
+
+            } catch (batchErr) {
+                console.error(`Failed to load batch ${batch.join(', ')}`, batchErr)
+                // Continue to next batch even if this one fails (Robustness)
+            }
+        }
+
+      } catch (err: any) {
+        console.error('Failed to fetch mentions:', err)
+        this.error = err.message || 'Failed to fetch mentions'
+        // Ideally preserve old data if fetch fails? For now reset or keep emptiness.
+        if (this.mentions.length === 0) this.mentions = [] 
+        this.loading = false
+      }
+    },
+
+    // Helper: Transform API Raw Item to Mention Object
+    transformMentions(rawItems: any[]): Mention[] {
+        return rawItems.map((item, index) => ({
+          id: item.id ? String(item.id) : `gen-${Math.random()}`, // Use random if index is not reliable across batches
           title: item.title || 'Untitled Mention',
           domain: item.domain || 'unknown.com',
           
-          // API doesn't provide these fields - use defaults
           visits: 0,
           influenceScore: 0,
           
           snippet: item.content || 'No content available',
           keywords: item.tags ? item.tags.split(',').map((t: string) => t.trim()) : [],
           
-          // Map source string to object
           source: {
             type: this.inferSourceType(item.source || ''),
             name: item.source || 'Unknown Source',
             avatar: '',
           },
           
-          // Map sentiment int (-1/0/1) to string
+          likes: item.likes || 0,
+          comments: item.comments || 0,
+          shares: item.shares || 0,
+          category: item.category || 'Uncategorized',
+          tags: item.tags ? item.tags.split(',') : [],
+          
           sentiment: this.mapSentimentIntToString(item.sentiment),
-            
-          // Combine date + hrs into ISO timestamp
           timestamp: this.combineDateTime(item.date, item.hrs)
         }))
-
-      } catch (err: any) {
-        console.error('Failed to fetch mentions:', err)
-        this.error = err.message || 'Failed to fetch mentions'
-        this.mentions = [] 
-      } finally {
-        this.loading = false
-      }
     },
 
     // Helper: Map sentiment int to string
@@ -256,28 +335,7 @@ export const useMentionsStore = defineStore('mentions', {
       this.fetchMentions()
     },
 
-    async getAIInsight() {
-      this.loading = true
-      try {
-        // Use dynamic credentials from token (no hardcoding needed)
-        const result = await lodifyApi.getAIInsight()
-        
-        // Handle nested response structure: data.data.getAiReport.body.insights
-        const reportData = result?.data?.getAiReport?.body
-        if (reportData && reportData.insights) {
-            this.aiInsight = reportData.insights
-        } else {
-            this.aiInsight = typeof result === 'string' ? result : JSON.stringify(result)
-        }
-        
-        return this.aiInsight
-      } catch (err: any) {
-        console.error('Failed to get AI insight:', err)
-        throw err
-      } finally {
-        this.loading = false
-      }
-    },
+
 
     // Manual Sync: Step 1 - Trigger scraping (Brand24 → Google Sheets)
     async triggerScraping(dateFrom: string, dateTo: string) {

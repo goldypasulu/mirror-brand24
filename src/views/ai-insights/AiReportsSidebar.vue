@@ -13,45 +13,38 @@ const loading = computed(() => store.loading)
         <VProgressCircular indeterminate size="24" color="primary" />
     </VCardText>
 
-    <VList v-else density="compact" class="pa-0 report-list bg-transparent" lines="two">
-        <!-- Header -->
-        <VListItem class="px-0 mb-2">
-            <template #prepend>
-                <VIcon icon="tabler-list" size="20" class="text-medium-emphasis" />
-            </template>
-            <VListItemTitle class="font-weight-bold text-uppercase text-caption text-medium-emphasis">
-                Reports List
-            </VListItemTitle>
-        </VListItem>
+    <VCardText v-else class="report-list">
+        <div class="d-flex align-center mb-3">
+             <VIcon icon="tabler-list" size="20" class="text-medium-emphasis me-2" />
+             <span class="font-weight-bold text-uppercase text-caption text-medium-emphasis">Reports List</span>
+        </div>
 
-      <VListItem
-        v-for="(report, index) in reports"
-        :key="report.id"
-        rounded="lg"
-        :variant="index === 0 ? 'tonal' : 'text'"
-        :color="index === 0 ? 'primary' : undefined"
-        class="mb-1"
-      >
-        <VListItemTitle class="font-weight-medium text-body-2">
-            {{ report.range }}
-        </VListItemTitle>
-        
-        <template #append>
-             <VChip size="x-small" color="info" variant="tonal" class="ms-2">
-                Weekly
-             </VChip>
-        </template>
-      </VListItem>
+        <VList density="compact" class="pa-0 bg-transparent" lines="two">
+            <VListItem
+                v-for="(report, index) in reports"
+                :key="report.id"
+                rounded="lg"
+                :variant="index === 0 ? 'tonal' : 'text'"
+                :color="index === 0 ? 'primary' : undefined"
+                class="mb-1"
+            >
+                <VListItemTitle class="font-weight-medium text-body-2">
+                    {{ report.range }}
+                </VListItemTitle>
+                
+                <template #append>
+                    <VChip size="x-small" color="info" variant="tonal" class="ms-2">
+                        Weekly
+                    </VChip>
+                </template>
+            </VListItem>
 
-      <VListItem v-if="reports.length === 0" class="text-disabled px-0">
-          No reports generated yet.
-      </VListItem>
-    </VList>
+            <div v-if="reports.length === 0" class="text-medium-emphasis text-body-2 mt-2">
+                No reports generated yet.
+            </div>
+        </VList>
+    </VCardText>
     
-    <VCardActions>
-        <VBtn variant="tonal" block color="primary">
-            Settings
-        </VBtn>
-    </VCardActions>
+
   </VCard>
 </template>

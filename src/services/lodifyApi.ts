@@ -162,23 +162,74 @@ export const lodifyApi = {
   },
 
   // Get AI Insight (uses credentials from getToken automatically)
-  async getAIInsight() {
+  // Get AI Insight (uses credentials from getToken automatically)
+  // Refactored to use GraphQL payload (per Postman Body details)
+  // Get AI Insight (uses credentials from getToken automatically)
+  // Get AI Insight (uses credentials from getToken automatically, or overrides if provided)
+  // Refactored to use GraphQL payload (Matching proven Node.js script)
+  async getAIInsight(overrideProjectId?: number, overrideReportId?: string) {
     const credentials = await this.getToken()
     
-    const { data, error } = await useLodify('/scrap/get-ai-insight').post({
-      projectId: parseInt(credentials.project_id),
-      reportId: credentials.report_id
+    // GraphQL Query (Proven working in Node.js)
+    const query = `
+      query getAiReport($projectId: Int!, $reportId: String!) {
+        getAiReport(projectId: $projectId, reportId: $reportId) {
+          id
+          dateFrom
+          dateTo
+          dateChartFrom
+          dateChartTo
+          version
+          body {
+            headline
+            trends
+            insights
+            recommendations
+          }
+          filters {
+            cxs
+          }
+        }
+      }
+    `
+
+    // Variables: Use override if verified IDs are needed, else fall back to token
+    // Variables: Use override if verified IDs are needed, else fall back to token
+    const variables = {
+        projectId: overrideProjectId || parseInt(credentials.project_id),
+        reportId: overrideReportId || credentials.report_id
+    }
+
+    console.log('[DEBUG-API] Requesting AI Insight with:', { variables, headers: {
+            'x-proxy-cookie': credentials.cookies ? 'Has Cookie' : 'Missing Cookie',
+            'token': credentials.token,
+            'project-id': credentials.project_id
+    }})
+
+    const { data, error, response } = await useLodify('/scrap/get-ai-insight', {
+        headers: {
+            'x-proxy-cookie': credentials.cookies,
+            'token': credentials.token,
+            'project-id': credentials.project_id,
+            'tknb24': credentials.token,
+            'Authorization': undefined as any // Explicitly remove Bearer to match working Node script
+        }
+    }).post({
+      query,
+      variables
     }).json()
 
     if (error.value) {
+      console.error('[DEBUG-API] Error:', error.value)
       throw new Error(error.value)
     }
 
+    console.log('[DEBUG-API] Raw Response:', data.value)
     return data.value
   },
 
   // Get All Mentions from Database (paginated)
-  async getAllMentions(page: number = 1, size: number = 50) {
+  async getAllMentions(page: number = 100, size: number = 1000) {
     await this.getToken() // Ensure authenticated
     
     const { data, error } = await useLodify(
@@ -220,7 +271,7 @@ export const lodifyApi = {
         'project-id': credentials.project_id, // Required: Brand24 project ID (with dash!)
         'tknb24': credentials.token,           // Required: Same as token
       }
-    }).post({}).json()
+    }).post().json()
 
     if (error.value) {
       throw new Error(error.value)

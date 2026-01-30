@@ -19,6 +19,12 @@ const getSentimentColor = (sentiment: string) => {
   const option = sentimentOptions.find(o => o.value === sentiment)
   return option?.color || 'secondary'
 }
+
+const formatNumber = (num: number) => {
+  if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
+  if (num >= 1000) return (num / 1000).toFixed(1) + 'k'
+  return num.toString()
+}
 </script>
 
 <template>
@@ -43,21 +49,24 @@ const getSentimentColor = (sentiment: string) => {
       <VCardSubtitle class="d-flex align-center gap-2 flex-wrap">
         <span class="text-primary">{{ mention.domain }}</span>
         <span>•</span>
-        <span>{{ mention.visits }} visits</span>
-        <span>•</span>
-        <span>Influence score: {{ mention.influenceScore }}/10</span>
-
-        <!-- Influence progress bar -->
-        <VProgressLinear
-          :model-value="mention.influenceScore * 10"
-          color="primary"
-          height="6"
-          rounded
-          style="max-width: 80px;"
-        />
-
+        <VChip size="x-small" label class="text-capitalize">{{ mention.category }}</VChip>
         <span>•</span>
         <span class="text-medium-emphasis">{{ mention.timestamp }}</span>
+        
+        <div class="d-flex align-center gap-4 ms-auto">
+          <div class="d-flex align-center text-medium-emphasis" title="Likes">
+            <VIcon icon="tabler-thumb-up" size="16" class="me-1" />
+            <span class="text-caption font-weight-medium">{{ formatNumber(mention.likes) }}</span>
+          </div>
+          <div class="d-flex align-center text-medium-emphasis" title="Comments">
+            <VIcon icon="tabler-message" size="16" class="me-1" />
+            <span class="text-caption font-weight-medium">{{ formatNumber(mention.comments) }}</span>
+          </div>
+          <div class="d-flex align-center text-medium-emphasis" title="Shares">
+            <VIcon icon="tabler-share" size="16" class="me-1" />
+            <span class="text-caption font-weight-medium">{{ formatNumber(mention.shares) }}</span>
+          </div>
+        </div>
       </VCardSubtitle>
 
       <template #append>

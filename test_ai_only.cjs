@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Test Script: Scrap → Truncate → Insert Workflow
+ * Test Script: AI Insight Direct Test
  * 
- * This script tests the complete API workflow without using the frontend.
- * It will help identify exactly where the 500 error occurs.
+ * This script tests ONLY the AI Insight API functionality.
  */
 
 const https = require('https');
@@ -14,8 +13,6 @@ const https = require('https');
 // ═══════════════════════════════════════════════════════════
 
 const BASE_URL = 'api.lodify.lodemo.id';
-const DATE_FROM = '2026-01-04';
-const DATE_TO = '2026-01-11';
 
 // Colors for console output
 const colors = {
@@ -87,17 +84,13 @@ function makeRequest(path, method = 'GET', headers = {}, body = null) {
   });
 }
 
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 // ═══════════════════════════════════════════════════════════
 // Test Workflow
 // ═══════════════════════════════════════════════════════════
 
-async function testWorkflow() {
+async function testAiOnly() {
   log('\n╔════════════════════════════════════════════════════════╗', 'blue');
-  log('║  API Workflow Test: Scrap → Truncate → Insert         ║', 'blue');
+  log('║  AI Insight API Test (Direct)                          ║', 'blue');
   log('╚════════════════════════════════════════════════════════╝\n', 'blue');
 
   let credentials = null;
@@ -108,6 +101,7 @@ async function testWorkflow() {
     // ─────────────────────────────────────────────────────────
     log('📦 Step 0: Getting credentials...', 'yellow');
     
+    // Using verified credentials from workflow test
     const tokenResponse = await makeRequest('/scrap/gettoken', 'POST', {}, {
       username: 'julian@lodagency.co.id',
       password: '@Lod@2025v2'
@@ -122,132 +116,21 @@ async function testWorkflow() {
     credentials = tokenResponse.data;
     log(`✅ Token received: ${credentials.token}`, 'green');
     log(`   Project ID: ${credentials.project_id}`, 'green');
-    log(`   Report ID: ${credentials.report_id}`, 'green');
     
-    await sleep(1000);
-
-    // ─────────────────────────────────────────────────────────
-    // Step 1: Scrape Data
-    // ─────────────────────────────────────────────────────────
-    log('\n📡 Step 1: Scraping data from Brand24...', 'yellow');
-    
-    const scrapHeaders = {
-      'Cookie': credentials.cookies,
-      'token': credentials.token,
-      'project-id': credentials.project_id,
-      'tknb24': credentials.token,
-    };
-
-    const scrapResponse = await makeRequest(
-      `/scrap/scrap-data?date_from=${DATE_FROM}&date_to=${DATE_TO}`,
-      'POST',
-      scrapHeaders
-    );
-
-    log(`   Status: ${scrapResponse.status} ${scrapResponse.statusText}`, 
-        scrapResponse.status === 200 ? 'green' : 'red');
-    
-    if (scrapResponse.status === 200) {
-      log(`   ✅ ${scrapResponse.data.detail || scrapResponse.data.message || 'Success'}`, 'green');
-    } else {
-      log(`   ❌ Error: ${JSON.stringify(scrapResponse.data)}`, 'red');
-      log('\n🛑 Stopping test - scraping failed', 'red');
-      return;
-    }
-
-    // Wait for scraping to complete
-    log('   ⏳ Waiting 5 seconds for scraping to complete...', 'blue');
-    await sleep(5000);
-
-    // ─────────────────────────────────────────────────────────
-    // Step 2: Truncate Data
-    // ─────────────────────────────────────────────────────────
-    log('\n🧹 Step 2: Truncating old data...', 'yellow');
-    
-    const truncateHeaders = {
-      'Cookie': credentials.cookies,
-      'token': credentials.token,
-      'project-id': credentials.project_id,
-      'tknb24': credentials.token,
-    };
-
-    const truncateResponse = await makeRequest(
-      '/scrap/truncate',
-      'DELETE',
-      truncateHeaders
-    );
-
-    log(`   Status: ${truncateResponse.status} ${truncateResponse.statusText}`, 
-        truncateResponse.status === 200 ? 'green' : 'red');
-    
-    if (truncateResponse.status === 200) {
-      log(`   ✅ ${truncateResponse.data.message || truncateResponse.data.detail || 'Success'}`, 'green');
-    } else {
-      log(`   ❌ Error: ${JSON.stringify(truncateResponse.data)}`, 'red');
-      log('\n🛑 Stopping test - truncate failed', 'red');
-      return;
-    }
-
-    // Wait for truncate to complete
-    log('   ⏳ Waiting 2 seconds for truncate to complete...', 'blue');
-    await sleep(2000);
-
-    // ─────────────────────────────────────────────────────────
-    // Step 3: Insert Data
-    // ─────────────────────────────────────────────────────────
-    log('\n💾 Step 3: Inserting data to database...', 'yellow');
-    
-    const insertHeaders = {
-      'Cookie': credentials.cookies,
-      'token': credentials.token,
-      'project-id': credentials.project_id,
-      'tknb24': credentials.token,
-    };
-
-    const insertResponse = await makeRequest(
-      `/scrap/insert-data?date_from=${DATE_FROM}&date_to=${DATE_TO}`,
-      'POST',
-      insertHeaders
-    );
-
-    log(`   Status: ${insertResponse.status} ${insertResponse.statusText}`, 
-        insertResponse.status === 200 ? 'green' : 'red');
-    
-    if (insertResponse.status === 200) {
-      log(`   ✅ ${insertResponse.data.detail || insertResponse.data.message || 'Success'}`, 'green');
-    } else {
-      log(`   ❌ Error: ${JSON.stringify(insertResponse.data)}`, 'red');
-      
-      // Show detailed error info
-      log('\n📋 Error Details:', 'magenta');
-      console.log(JSON.stringify(insertResponse.data, null, 2));
-      
-      log('\n🛑 Insert failed - this is the 500 error!', 'red');
-      return;
-    }
-
     // ─────────────────────────────────────────────────────────
     // Step 4: Get AI Insight (GraphQL)
     // ─────────────────────────────────────────────────────────
-    log('\n🤖 Step 4: Getting AI Insight...', 'yellow');
+    log('\n🤖 Step 1: Getting AI Insight...', 'yellow');
 
     const query = `
       query getAiReport($projectId: Int!, $reportId: String!) {
         getAiReport(projectId: $projectId, reportId: $reportId) {
           id
-          dateFrom
-          dateTo
-          dateChartFrom
-          dateChartTo
-          version
           body {
             headline
             trends
             insights
             recommendations
-          }
-          filters {
-            cxs
           }
         }
       }
@@ -276,20 +159,23 @@ async function testWorkflow() {
         insightResponse.status === 200 ? 'green' : 'red');
 
     if (insightResponse.status === 200) {
-      log(`   ✅ Insight received! Length: ${JSON.stringify(insightResponse.data).length}`, 'green');
+      const dataStr = JSON.stringify(insightResponse.data);
+      log(`   ✅ Insight received! Length: ${dataStr.length}`, 'green');
+      
+      const body = insightResponse.data?.data?.getAiReport?.body;
+      if (body) {
+        log(`   📄 Headline: "${body.headline}"`, 'green');
+        log(`   📈 Trends: ${body.trends?.length || 0}`, 'green');
+      }
     } else {
       log(`   ❌ Error: ${JSON.stringify(insightResponse.data)}`, 'red');
-      // show body if string
-      if (typeof insightResponse.data === 'string') {
-         console.log('   Response Body:', insightResponse.data);
-      }
     }
 
     // ─────────────────────────────────────────────────────────
     // Success!
     // ─────────────────────────────────────────────────────────
     log('\n╔════════════════════════════════════════════════════════╗', 'green');
-    log('║  ✅ ALL STEPS COMPLETED SUCCESSFULLY!                  ║', 'green');
+    log('║  ✅ TEST COMPLETED                                     ║', 'green');
     log('╚════════════════════════════════════════════════════════╝\n', 'green');
 
   } catch (error) {
@@ -298,18 +184,5 @@ async function testWorkflow() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════
-// Run Test
-// ═══════════════════════════════════════════════════════════
-
-log('\n🚀 Starting API workflow test...', 'blue');
-log(`   Date range: ${DATE_FROM} to ${DATE_TO}`, 'blue');
-log(`   Base URL: https://${BASE_URL}\n`, 'blue');
-
-testWorkflow().then(() => {
-  log('\n✨ Test completed!\n', 'blue');
-}).catch((error) => {
-  log(`\n💥 Test failed: ${error.message}\n`, 'red');
-  console.error(error);
-  process.exit(1);
-});
+// Run
+testAiOnly();

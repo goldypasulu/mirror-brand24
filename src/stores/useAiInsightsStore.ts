@@ -1,5 +1,6 @@
-import { defineStore } from 'pinia'
+import { lodifyApi } from '@/services/lodifyApi'; // Import API service
 
+// Structure for the UI (kept similar to existing to minimize UI breakage)
 interface AiInsight {
   id: number
   title: string
@@ -8,92 +9,70 @@ interface AiInsight {
   citations: { source: string; date: string }[]
 }
 
-interface ChartData {
-  series: {
-    name: string
-    data: number[]
-  }[]
-  categories: string[]
-}
-
-interface WeeklyReport {
-  id: number
-  range: string
-  sent: boolean
-}
-
-interface AiInsightsState {
-  insights: AiInsight[]
-  chartData: ChartData | null
-  reports: WeeklyReport[]
-  loading: boolean
-  mockMode: boolean
-}
+// ... (Keep existing Chart/Report interfaces) ...
 
 export const useAiInsightsStore = defineStore('aiInsights', {
-  state: (): AiInsightsState => ({
-    insights: [],
-    chartData: null,
-    reports: [],
+  state: () => ({
+    report: {
+      headline: '',
+      trends: '' as string, // HTML String <ol><li>...</li></ol>
+      insights: '' as string, // HTML String <ol><li>...</li></ol>
+      recommendations: '' as string, // HTML String <ol><li>...</li></ol>
+    },
     loading: false,
-    mockMode: true,
+    error: null as string | null,
+    reports: [] as any[], // Helper for Sidebar UI (to avoid crash)
   }),
 
   actions: {
     async fetchInsights() {
       this.loading = true
+      this.error = null
       
-      // Simulate API delay if in mock mode
-      if (this.mockMode) {
-        await new Promise(resolve => setTimeout(resolve, 1000))
+      try {
+        // 🚀 REAL API CALL (Using Verified IDs)
+        const PROVEN_PROJECT_ID = 1397360667
+        const PROVEN_REPORT_ID = '69774c766abe1b970ce41087'
+        
+        const response = await lodifyApi.getAIInsight(PROVEN_PROJECT_ID, PROVEN_REPORT_ID)
+        
+        // Handle response structure
+        console.log('[DEBUG-STORE] Store received:', response)
+        
+        // Try to find the body deep in standard GraphQL structure or direct structure
+        // API Wraps it in { status: "success", data: { data: { getAiReport: ... } } }
+        let rawBody = response?.data?.data?.getAiReport?.body
+                   || response?.data?.getAiReport?.body 
+                   || response?.getAiReport?.body 
+                   || response?.body 
+                   || {}
 
-        this.insights = [
-          {
-            id: 1,
-            title: 'Increasing popularity of the "AI" topic',
-            content: 'The "AI" topic has been generating significant buzz lately. Mentions have increased by **45%** compared to last week, driven largely by new product announcements from major tech companies.',
-            sentiment: 'positive',
-            citations: [{ source: 'Twitter', date: '2 hrs ago' }, { source: 'TechCrunch', date: '5 hrs ago' }]
-          },
-          {
-            id: 2,
-            title: 'Negative sentiment spike on Tuesday',
-            content: 'A sudden spike in negative sentiment was observed on Tuesday regarding "server downtime". Users reported inability to access services for approximately 2 hours.',
-            sentiment: 'negative',
-            citations: [{ source: 'Facebook', date: '2 days ago' }]
-          },
-          {
-            id: 3,
-            title: 'Influencer engagement is high',
-            content: 'Several key influencers in the tech space have shared your latest blog post. This has expanded your potential reach by **150k** users.',
-            sentiment: 'positive',
-            citations: [{ source: 'LinkedIn', date: '1 day ago' }]
-          }
-        ]
-
-        this.chartData = {
-          series: [
-            {
-              name: 'Mentions',
-              data: [31, 40, 28, 51, 42, 109, 100],
-            },
-            {
-              name: 'Reach',
-              data: [11, 32, 45, 32, 34, 52, 41],
-            },
-          ],
-          categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+        console.log('[DEBUG-STORE] Found raw body part:', typeof rawBody, rawBody)
+        
+        let reportBody = rawBody
+        if (typeof rawBody === 'string') {
+            try {
+                reportBody = JSON.parse(rawBody)
+                console.log('[DEBUG-STORE] Parsed string body:', reportBody)
+            } catch (e) {
+                console.error('[DEBUG-STORE] Failed to parse string body:', e)
+            }
+        }
+        
+        // Update State - DIRECT ASSIGNMENT (API returns HTML strings)
+        this.report = {
+          headline: reportBody.headline || 'No headline available',
+          trends: reportBody.trends || '',
+          insights: reportBody.insights || '',
+          recommendations: reportBody.recommendations || '',
         }
 
-        this.reports = [
-          { id: 101, range: 'Jan 20 - Jan 26', sent: true },
-          { id: 102, range: 'Jan 13 - Jan 19', sent: true },
-          { id: 103, range: 'Jan 06 - Jan 12', sent: true },
-        ]
-
+      } catch (err: any) {
+        console.error('Failed to fetch AI insights:', err)
+        this.error = err.message || 'Failed to load insights'
+      } finally {
         this.loading = false
       }
-      // TODO: Implement real API call when endpoint is ready
     },
   },
 })

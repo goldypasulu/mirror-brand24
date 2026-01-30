@@ -1,16 +1,16 @@
-import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite'
-import vue from '@vitejs/plugin-vue'
-import vueJsx from '@vitejs/plugin-vue-jsx'
-import { fileURLToPath } from 'node:url'
-import AutoImport from 'unplugin-auto-import/vite'
-import Components from 'unplugin-vue-components/vite'
-import { VueRouterAutoImports, getPascalCaseRouteName } from 'unplugin-vue-router'
-import VueRouter from 'unplugin-vue-router/vite'
-import { defineConfig } from 'vite'
-import VueDevTools from 'vite-plugin-vue-devtools'
-import MetaLayouts from 'vite-plugin-vue-meta-layouts'
-import vuetify from 'vite-plugin-vuetify'
-import svgLoader from 'vite-svg-loader'
+import VueI18nPlugin from '@intlify/unplugin-vue-i18n/vite';
+import vue from '@vitejs/plugin-vue';
+import vueJsx from '@vitejs/plugin-vue-jsx';
+import { fileURLToPath } from 'node:url';
+import AutoImport from 'unplugin-auto-import/vite';
+import Components from 'unplugin-vue-components/vite';
+import { VueRouterAutoImports, getPascalCaseRouteName } from 'unplugin-vue-router';
+import VueRouter from 'unplugin-vue-router/vite';
+import { defineConfig } from 'vite';
+import VueDevTools from 'vite-plugin-vue-devtools';
+import MetaLayouts from 'vite-plugin-vue-meta-layouts';
+import vuetify from 'vite-plugin-vuetify';
+import svgLoader from 'vite-svg-loader';
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -27,22 +27,22 @@ export default defineConfig({
             // We send 'x-proxy-cookie' from frontend, and proxy moves it to 'Cookie'.
             
             const tunneledCookie = proxyReq.getHeader('x-proxy-cookie')
+            const originalUrl = req.url
+            
             if (tunneledCookie) {
               // 1. Set the Clean Cookie intended by our logic
               proxyReq.setHeader('Cookie', tunneledCookie)
-              // 2. Remove the custom header
-              proxyReq.removeHeader('x-proxy-cookie')
-              console.log('🍪 Tunneling Cookie SUCCESS')
-            } else {
-               // If no tunnel, remove browser cookies to prevent contamination
-               proxyReq.removeHeader('Cookie')
+              
+              // 2. Strip Browser Interference
+              proxyReq.removeHeader('x-proxy-cookie') // Remove the tunnel header
+              proxyReq.removeHeader('Origin')         // Remove origin (backend might check generic)
+              proxyReq.removeHeader('Referer')        // Remove referer
+              
+              // 3. Force User-Agent (optional, but good for consistency with Node.js)
+              proxyReq.setHeader('User-Agent', 'axios/1.7.9') 
+              
+              console.log(`[Proxy] 🟢 Tunneled Cookie for ${originalUrl}`)
             }
-
-            // 3. Strip browser tracking headers
-            proxyReq.removeHeader('Origin')
-            proxyReq.removeHeader('Referer')
-            
-            console.log('🚀 Proxy -> Backend:', req.method, req.url)
           })
         },
       },

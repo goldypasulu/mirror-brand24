@@ -161,40 +161,25 @@ const progressValue = computed(() => {
     </VCardTitle>
     
     <VCardText>
-      <p class="text-body-2 text-medium-emphasis mb-4">
+      <p class="text-body-2 text-medium-emphasis mb-2">
         Sync data from Brand24 to database
       </p>
       
-      <!-- Date Range Inputs -->
-      <VRow>
-        <VCol cols="6">
-          <VTextField
-            v-model="syncDateFrom"
-            type="date"
-            label="From"
-            density="compact"
-            :disabled="syncing"
-            :error="!!dateRangeError"
-          />
-        </VCol>
-        <VCol cols="6">
-          <VTextField
-            v-model="syncDateTo"
-            type="date"
-            label="To"
-            density="compact"
-            :disabled="syncing"
-            :error="!!dateRangeError"
-          />
-        </VCol>
-      </VRow>
+      <!-- Date Range Inputs with Custom Picker -->
+      <div class="d-flex justify-center mb-4">
+        <CustomDatePicker
+          v-model:startDate="syncDateFrom"
+          v-model:endDate="syncDateTo"
+          :maxRangeDays="14"
+        />
+      </div>
       
       <!-- Validation Error -->
       <VAlert
         v-if="dateRangeError"
         type="warning"
         density="compact"
-        class="mb-3"
+        class="mt-3 mb-1"
       >
         {{ dateRangeError }}
       </VAlert>
@@ -203,6 +188,7 @@ const progressValue = computed(() => {
       <VBtn
         block
         color="primary"
+        class="mt-4"
         :loading="syncing"
         :disabled="!canSync"
         @click="handleSync"
@@ -240,7 +226,7 @@ const progressValue = computed(() => {
       </VAlert>
       
       <!-- Info -->
-      <div class="mt-4 text-caption text-medium-emphasis">
+      <div class="mt-3 text-caption text-medium-emphasis text-center">
         <VIcon icon="mdi-information-outline" size="small" class="me-1" />
         Maximum range: 2 weeks
       </div>
