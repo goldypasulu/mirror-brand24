@@ -46,6 +46,9 @@ const parseDate = (dateStr: string): Date | null => {
 const currentDate = new Date()
 const viewYear = ref(currentDate.getFullYear())
 const viewMonth = ref(currentDate.getMonth())
+type ViewMode = 'day' | 'month' | 'year'
+const viewMode = ref<ViewMode>('day')
+const yearRangeStart = ref(Math.floor(currentDate.getFullYear() / 12) * 12)
 
 // Computed Calendar Data
 const monthNames = [
@@ -136,6 +139,16 @@ const resetSelection = () => {
 }
 
 const navigateMonth = (step: number) => {
+  if (viewMode.value === 'year') {
+    yearRangeStart.value += (step * 12)
+    return
+  }
+  
+  if (viewMode.value === 'month') {
+      viewYear.value += step
+      return
+  }
+
   let newMonth = viewMonth.value + step
   let newYear = viewYear.value
   
@@ -150,6 +163,36 @@ const navigateMonth = (step: number) => {
   viewMonth.value = newMonth
   viewYear.value = newYear
 }
+
+const toggleViewMode = (mode: ViewMode) => {
+  if (viewMode.value === mode) {
+      viewMode.value = 'day' // Toggle off
+  } else {
+      viewMode.value = mode
+      if (mode === 'year') {
+          // Center the range around current viewYear
+          yearRangeStart.value = Math.floor(viewYear.value / 12) * 12
+      }
+  }
+}
+
+const selectMonth = (monthIndex: number) => {
+  viewMonth.value = monthIndex
+  viewMode.value = 'day'
+}
+
+const selectYear = (year: number) => {
+  viewYear.value = year
+  viewMode.value = 'month' // Go to month selection naturally after year
+}
+
+const yearsList = computed(() => {
+    const years = []
+    for (let i = 0; i < 12; i++) {
+        years.push(yearRangeStart.value + i)
+    }
+    return years
+})
 
 // Styling Helper Checkers
 const isSelected = (date: Date) => {
@@ -188,8 +231,21 @@ const isDisabled = (date: Date) => {
   <div class="custom-date-picker elevation-2 rounded-lg pa-4">
     <!-- Header -->
     <div class="d-flex align-center justify-space-between mb-4">
-      <div class="text-h6 font-weight-bold primary--text">
-        {{ currentMonthName }} {{ viewYear }}
+      <div class="d-flex align-center gap-2">
+        <span 
+            class="text-h6 font-weight-bold cursor-pointer hover-opacity"
+            :class="viewMode === 'month' ? 'primary--text' : 'text-high-emphasis'"
+            @click="toggleViewMode('month')"
+        >
+            {{ currentMonthName }}
+        </span>
+        <span 
+            class="text-h6 font-weight-bold cursor-pointer hover-opacity"
+            :class="viewMode === 'year' ? 'primary--text' : 'text-high-emphasis'"
+            @click="toggleViewMode('year')"
+        >
+            {{ viewYear }}
+        </span>
       </div>
       <div class="d-flex gap-2">
         <VBtn icon="mdi-chevron-left" variant="text" density="comfortable" @click="navigateMonth(-1)" />
@@ -197,6 +253,33 @@ const isDisabled = (date: Date) => {
       </div>
     </div>
 
+    <!-- Year Selection Grid -->
+    <div v-if="viewMode === 'year'" class="month-grid">
+      <div 
+        v-for="year in yearsList" 
+        :key="year"
+        class="month-cell"
+        :class="{ 'selected': viewYear === year }"
+        @click="selectYear(year)"
+      >
+        {{ year }}
+      </div>
+    </div>
+
+    <!-- Month Selection Grid -->
+    <div v-else-if="viewMode === 'month'" class="month-grid">
+      <div 
+        v-for="(month, index) in monthNames" 
+        :key="month"
+        class="month-cell"
+        :class="{ 'selected': viewMonth === index }"
+        @click="selectMonth(index)"
+      >
+        {{ month.substring(0, 3) }}
+      </div>
+    </div>
+
+    <template v-else>
     <!-- Week Days -->
     <div class="calendar-grid mb-2">
       <div v-for="day in weekDays" :key="day" class="text-center text-caption text-medium-emphasis">
@@ -223,6 +306,7 @@ const isDisabled = (date: Date) => {
         {{ dayObj.day }}
       </div>
     </div>
+    </template>
 
     <!-- Footer -->
     <div class="d-flex justify-space-between align-center mt-4 pt-2 border-t">
@@ -353,7 +437,45 @@ const isDisabled = (date: Date) => {
   color: rgb(var(--v-theme-primary));
 }
 
+.text-high-emphasis {
+    color: rgba(var(--v-theme-on-surface), 0.87);
+}
+
 .border-t {
   border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.hover-opacity:hover {
+  opacity: 0.8;
+}
+
+.month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.month-cell {
+  padding: 8px;
+  text-align: center;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  
+  &:hover {
+    background-color: rgba(var(--v-theme-on-surface), 0.08);
+  }
+
+  &.selected {
+    background-color: rgb(var(--v-theme-primary));
+    color: rgb(var(--v-theme-on-primary));
+    font-weight: bold;
+  }
 }
 </style>

@@ -9,6 +9,14 @@ interface AiInsight {
   citations: { source: string; date: string }[]
 }
 
+export interface ChartData {
+  categories: string[]
+  series: {
+    name: string
+    data: number[]
+  }[]
+}
+
 // ... (Keep existing Chart/Report interfaces) ...
 
 export const useAiInsightsStore = defineStore('aiInsights', {
@@ -22,6 +30,7 @@ export const useAiInsightsStore = defineStore('aiInsights', {
     loading: false,
     error: null as string | null,
     reports: [] as any[], // Helper for Sidebar UI (to avoid crash)
+    chartData: null as ChartData | null,
   }),
 
   actions: {

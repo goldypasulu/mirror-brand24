@@ -101,7 +101,7 @@ const formatContent = (text: string) => {
                 <VIcon icon="tabler-check" class="me-2 text-info" />
                 Recommendations
             </h3>
-            <VCard color="primary" variant="tonal">
+            <VCard variant="outlined" class="bg-surface">
                  <VCardText>
                      <div class="insight-html-content" v-html="report.recommendations"></div>
                 </VCardText>

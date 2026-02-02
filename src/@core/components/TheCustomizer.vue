@@ -390,7 +390,7 @@ const resetCustomizer = async () => {
                 <VBtn
                   icon
                   size="30"
-                  :color="vuetifyTheme.current.value.colors.primary === customPrimaryColor ? customPrimaryColor : $vuetify.theme.current.dark ? '#8692d029' : '#4b465c29'"
+                  :color="vuetifyTheme.current.value.colors.primary === customPrimaryColor ? customPrimaryColor : vuetifyTheme.current.value.dark ? '#8692d029' : '#4b465c29'"
                   variant="flat"
                   style="border-radius: 0.375rem;"
                 >
